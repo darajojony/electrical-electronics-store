@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
@@ -7,11 +8,24 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const { id } = await context.params;
   try {
     const body = await request.json();
-    const data: Record<string, unknown> = {};
-    for (const key of ["sku", "name", "nameKm", "description", "imageUrl"] as const) if (body[key] !== undefined) data[key] = body[key] === "" ? null : String(body[key]);
-    if (body.price !== undefined) { const n = Number(body.price); if (!Number.isFinite(n) || n < 0) return NextResponse.json({ error: "Invalid price" }, { status: 400 }); data.price = n; }
-    if (body.stock !== undefined) { const n = Number(body.stock); if (!Number.isInteger(n) || n < 0) return NextResponse.json({ error: "Invalid stock" }, { status: 400 }); data.stock = n; }
-    for (const key of ["active", "featured"] as const) if (body[key] !== undefined) data[key] = Boolean(body[key]);
+    const data: Prisma.ProductUncheckedUpdateInput = {};
+    if (body.sku !== undefined) data.sku = String(body.sku);
+    if (body.name !== undefined) data.name = String(body.name);
+    if (body.nameKm !== undefined) data.nameKm = String(body.nameKm);
+    if (body.description !== undefined) data.description = body.description === "" ? null : String(body.description);
+    if (body.imageUrl !== undefined) data.imageUrl = body.imageUrl === "" ? null : String(body.imageUrl);
+    if (body.price !== undefined) {
+      const n = Number(body.price);
+      if (!Number.isFinite(n) || n < 0) return NextResponse.json({ error: "Invalid price" }, { status: 400 });
+      data.price = n;
+    }
+    if (body.stock !== undefined) {
+      const n = Number(body.stock);
+      if (!Number.isInteger(n) || n < 0) return NextResponse.json({ error: "Invalid stock" }, { status: 400 });
+      data.stock = n;
+    }
+    if (body.active !== undefined) data.active = Boolean(body.active);
+    if (body.featured !== undefined) data.featured = Boolean(body.featured);
     if (body.categoryId !== undefined) data.categoryId = String(body.categoryId);
     const product = await prisma.product.update({ where: { id }, data });
     return NextResponse.json({ product });
